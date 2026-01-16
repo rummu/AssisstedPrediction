@@ -1,0 +1,107 @@
+import asyncio
+import logging
+import joblib
+import json
+import numpy as np
+from concurrent.futures import ThreadPoolExecutor
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+app = FastAPI()
+
+executor = ThreadPoolExecutor()
+
+with open("mapping_features.json", "r") as f:
+    feature_mappings = json.load(f)
+    
+marital_status_mapping = feature_mappings['marital_status']
+caste_mapping = feature_mappings['caste']
+qualified_mapping = feature_mappings['highest_qualification']
+employed_mapping = feature_mappings['employed']
+occupation_mapping = feature_mappings['occupation']
+on_behalf_mapping = feature_mappings['on_behalf']
+state_mapping = feature_mappings['state']
+city_mapping = feature_mappings['city']
+income_mapping = feature_mappings['income']
+height_mapping = feature_mappings['height']
+
+xgb_model = joblib.load("xgb_membership_model.pkl")
+
+loaded = np.load("device_prices.npy", allow_pickle=True)
+
+if isinstance(loaded, np.ndarray) and loaded.ndim == 2:
+    device_prices_map = {str(k).lower().strip(): v for k, v in loaded if len((k, v)) >= 2}
+else:
+    device_prices_map = loaded.item() if hasattr(loaded, "item") else loaded
+            
+class PredictionRequest(BaseModel):
+    member_id: int
+    age: float
+    gender: bool
+    marital_status: int
+    sect: bool
+    caste: int
+    income: int
+    height: int
+    highest_qualification: int
+    employed: int
+    occupation: int
+    on_behalf: int
+    ads: int
+    device: str 
+    state: int
+    city: int
+    family_info: bool
+    preferences: bool
+
+@app.post("/assissted_prediction")
+async def assissted_prediction(data: PredictionRequest):
+    try:
+        loop = asyncio.get_running_loop()
+        result = await loop.run_in_executor(executor, get_prediction, data)
+        return result
+    except Exception as e:
+        logger.error(f"Error getting prediction results: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error getting prediction results: {str(e)}")
+
+def get_prediction(data: PredictionRequest):
+    
+    device_key = str(data.device).lower().strip()
+    price = device_prices_map.get(device_key,19990.0)
+    if device_key not in device_prices_map:
+        logger.info(f"Device '{data.device}' not found in database, using default price.")
+    device_val = 0 if price < 20000 else 1 if price < 40000 else 2 if price < 70000 else 3 if price < 100000 else 4
+
+    features = (
+        (data.age - 18) / 66,
+        int(data.gender),
+        marital_status_mapping.get(str(data.marital_status), 1),
+        int(data.sect),
+        caste_mapping.get(str(data.caste), 1),
+        income_mapping.get(str(data.income), 0),
+        height_mapping.get(str(data.height), 0.5),
+        qualified_mapping.get(str(data.highest_qualification), 2),
+        employed_mapping.get(str(data.employed), 2),
+        occupation_mapping.get(str(data.occupation), 0),
+        on_behalf_mapping.get(str(data.on_behalf), 3) ,
+        data.ads,
+        device_val,
+        state_mapping.get(str(data.state), 5),
+        city_mapping.get(str(data.city), 3),
+        int(data.family_info),
+        int(data.preferences)
+    )
+    
+    prediction = xgb_model.predict_proba([features])[0][1]
+    return bool(prediction > 0.6)
+
+
+
+
+#uvicorn assissted:app --host 0.0.0.0 --port 5000 --workers 1
+
+
+
