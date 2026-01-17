@@ -99,6 +99,7 @@ def get_prediction(data: PredictionRequest):
     )
     
     prediction = xgb_model.predict_proba([features])[0][1]
+    logger.info(f"Member ID: {data.member_id}, Prediction: {prediction}")
     return bool(prediction > 0.6)
 
 
