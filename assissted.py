@@ -100,7 +100,7 @@ def get_prediction(data: PredictionRequest):
     
     prediction = xgb_model.predict_proba([features])[0][1]
     logger.info(f"Member ID: {data.member_id}, Prediction: {prediction}, Features: {features}")
-    return bool(prediction > 0.6)
+    return bool(prediction > 0.5)
 
 
 
@@ -113,4 +113,5 @@ def get_prediction(data: PredictionRequest):
 #pkill gunicorn
 #nohup uvicorn assissted:app --host 0.0.0.0 --port 2000 --workers 1 \
 # > assisted_uvicorn.log 2>&1 &
+
 
