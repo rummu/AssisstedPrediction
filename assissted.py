@@ -6,6 +6,8 @@ import numpy as np
 from concurrent.futures import ThreadPoolExecutor
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+from typing import Optional
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -51,7 +53,7 @@ class PredictionRequest(BaseModel):
     occupation: int
     on_behalf: int
     ads: int
-    device: str 
+    device: Optional[str] = None
     state: int
     city: int
     family_info: bool
@@ -69,7 +71,8 @@ async def assissted_prediction(data: PredictionRequest):
 
 def get_prediction(data: PredictionRequest):
     
-    device_key = str(data.device).lower().strip()
+    device_input = data.device if data.device else "unknown"
+    device_key = str(device_input).lower().strip()
     price = device_prices_map.get(device_key,19990.0)
     if device_key not in device_prices_map:
         logger.info(f"Device '{data.device}' not found in database, using default price.")
@@ -101,7 +104,7 @@ def get_prediction(data: PredictionRequest):
 
 
 
-#uvicorn assissted:app --host 0.0.0.0 --port 5000 --workers 1
+#uvicorn assissted:app --host 0.0.0.0 --port 2000 --workers 1
 
 
 
