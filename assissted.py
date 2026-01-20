@@ -8,7 +8,6 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -32,12 +31,13 @@ height_mapping = feature_mappings['height']
 
 xgb_model = joblib.load("xgb_membership_model.pkl")
 
-loaded = np.load("device_prices.npy", allow_pickle=True)
+with open("device_prices.json", "r") as f:
+    device_prices_map = json.load(f)
+    
+device_prices_map = {str(k).lower().strip(): v for k, v in device_prices_map.items()}
 
-if isinstance(loaded, np.ndarray) and loaded.ndim == 2:
-    device_prices_map = {str(k).lower().strip(): v for k, v in loaded if len((k, v)) >= 2}
-else:
-    device_prices_map = loaded.item() if hasattr(loaded, "item") else loaded
+city_list = [3, 6, 4, 2, 1, 0, 5]
+state_list = [5, 0, 3, 1 , 8, 6, 2, 4, 7]
             
 class PredictionRequest(BaseModel):
     member_id: int
@@ -54,8 +54,12 @@ class PredictionRequest(BaseModel):
     on_behalf: int
     ads: int
     device: Optional[str] = None
-    state: int
-    city: int
+    present_country: int
+    permanent_country: int
+    present_state: int
+    permanent_state:int
+    present_city:int
+    permanent_city: int
     family_info: bool
     preferences: bool
 
@@ -70,13 +74,20 @@ async def assissted_prediction(data: PredictionRequest):
         raise HTTPException(status_code=500, detail=f"Error getting prediction results: {str(e)}")
 
 def get_prediction(data: PredictionRequest):
-    
-    device_input = data.device if data.device else "unknown"
-    device_key = str(device_input).lower().strip()
-    price = device_prices_map.get(device_key,19990.0)
+
+    device_key = (data.device or "").lower().strip()
+    logger.info(f"Device key: {device_key}")
+    price = device_prices_map.get(device_key, 19990.0)
     if device_key not in device_prices_map:
-        logger.info(f"Device '{data.device}' not found in database, using default price.")
+        logger.info(f"Device '{device_key or 'missing'}' not found → default price 19990")
     device_val = 0 if price < 20000 else 1 if price < 40000 else 2 if price < 70000 else 3 if price < 100000 else 4
+
+    if data.present_country != 101 or data.permanent_country != 101:
+        state = 7
+        city = 5
+    else:
+        state = max([state_mapping.get(str(data.present_state), 5), state_mapping.get(str(data.permanent_state), 5)], key=state_list.index)
+        city = max([city_mapping.get(str(data.present_city), 3), city_mapping.get(str(data.permanent_city), 3)], key=city_list.index)
 
     features = (
         (data.age - 18) / 66,
@@ -92,14 +103,15 @@ def get_prediction(data: PredictionRequest):
         on_behalf_mapping.get(str(data.on_behalf), 3) ,
         data.ads,
         device_val,
-        state_mapping.get(str(data.state), 5),
-        city_mapping.get(str(data.city), 3),
+        state,
+        city,
         int(data.family_info),
         int(data.preferences)
     )
     
     prediction = xgb_model.predict_proba([features])[0][1]
     logger.info(f"Member ID: {data.member_id}, Prediction: {prediction}, Features: {features}")
+    
     return bool(prediction > 0.5)
 
 
@@ -110,8 +122,10 @@ def get_prediction(data: PredictionRequest):
 
 #Server Side
 #source venv/bin/activate
-#pkill gunicorn
+#pkill uvicorn
 #nohup uvicorn assissted:app --host 0.0.0.0 --port 2000 --workers 1 \
 # > assisted_uvicorn.log 2>&1 &
+
+
 
 
