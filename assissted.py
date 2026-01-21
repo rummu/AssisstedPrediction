@@ -76,7 +76,6 @@ async def assissted_prediction(data: PredictionRequest):
 def get_prediction(data: PredictionRequest):
 
     device_key = (data.device or "").lower().strip()
-    logger.info(f"Device key: {device_key}")
     price = device_prices_map.get(device_key, 19990.0)
     if device_key not in device_prices_map:
         logger.info(f"Device '{device_key or 'missing'}' not found → default price 19990")
@@ -123,7 +122,7 @@ def get_prediction(data: PredictionRequest):
 #Server Side
 #source venv/bin/activate
 #pkill uvicorn
-#nohup uvicorn assissted:app --host 0.0.0.0 --port 2000 --workers 1 \
+# nohup uvicorn assissted:app --host 0.0.0.0 --port 2000 --workers 1 \
 # > assisted_uvicorn.log 2>&1 &
 
 
