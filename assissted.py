@@ -127,5 +127,9 @@ def get_prediction(data: PredictionRequest):
 # > assisted_uvicorn.log 2>&1 &
 
 
+#ps aux | grep assissted | grep -v grep
+#kill -9 2387881
+
+
 
 
