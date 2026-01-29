@@ -7,6 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Optional
+import math
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -110,10 +111,8 @@ def get_prediction(data: PredictionRequest):
     
     prediction = xgb_model.predict_proba([features])[0][1]
     logger.info(f"Member ID: {data.member_id}, Prediction: {prediction}, Features: {features}")
-    
-    return bool(prediction > 0.5)
-
-
+    return round(110 * (1 - math.exp(-2.25 * prediction)), 2) if prediction > 0.5 else 0.0
+    # return bool(prediction > 0.5)
 
 
 #uvicorn assissted:app --host 0.0.0.0 --port 2000 --workers 1
@@ -127,7 +126,7 @@ def get_prediction(data: PredictionRequest):
 
 
 #ps aux | grep assissted | grep -v grep
-#kill -9 2387881
+#kill -9 2503519
 
 
 
