@@ -117,7 +117,6 @@ def get_prediction(data: PredictionRequest):
 
 #uvicorn assissted:app --host 0.0.0.0 --port 2000 --workers 1
 
-
 #Server Side
 #source venv/bin/activate
 #pkill uvicorn
