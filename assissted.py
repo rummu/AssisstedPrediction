@@ -121,8 +121,7 @@ def get_prediction(data: PredictionRequest):
     
     prediction = xgb_model.predict_proba([features])[0][1]
     logger.info(f"Member ID: {data.member_id}, Prediction: {prediction}, Features: {features}")
-    return round(110 * (1 - math.exp(-2.25 * prediction)), 2) if prediction > 0.5 else 0.0
-
+    return 0 if prediction <= 0.1 else 1 if prediction < 0.5 else round(110 * (1 - math.exp(-2.25 * prediction)), 2)
 
 def get_raw_prediction(data: PredictionRequest):
     device_key = (data.device or "").lower().strip()
@@ -168,7 +167,7 @@ def get_raw_prediction(data: PredictionRequest):
 #Server Side
 #source venv/bin/activate
 #ps aux | grep assissted | grep -v grep
-#kill -9 2524303
+#kill -9 2930837
 # nohup uvicorn assissted:app --host 0.0.0.0 --port 2000 --workers 1 \
 # > assisted_uvicorn.log 2>&1 &
 
