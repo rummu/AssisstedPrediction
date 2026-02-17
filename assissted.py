@@ -158,16 +158,15 @@ def get_raw_prediction(data: PredictionRequest):
     )
     
     prediction = xgb_model.predict_proba([features])[0][1]
-    logger.info(f"Member ID: {data.member_id}, Raw Prediction: {prediction}")
+    logger.info(f"Member ID: {data.member_id}, Raw Prediction: {prediction}, Raw Features: {features}")
     return float(prediction) * 100
-
 
 #uvicorn assissted:app --host 0.0.0.0 --port 2000 --workers 1
 
 #Server Side
 #source venv/bin/activate
 #ps aux | grep assissted | grep -v grep
-#kill -9 2930837
+#kill -9 3205276
 # nohup uvicorn assissted:app --host 0.0.0.0 --port 2000 --workers 1 \
 # > assisted_uvicorn.log 2>&1 &
 
